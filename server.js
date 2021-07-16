@@ -14,8 +14,10 @@ const passport = require('passport')
 const User = require('./models/model')
 const bcrypt = require('bcrypt')
 const initializePassport = require('./passport-config')
+var cookieParser = require('cookie-parser')
+const bodyParser = require('body-parser')
+const { Store } = require('express-session')
 
-initializePassport(passport)
 
 //establish connection to database
 mongoose.connect(url, {
@@ -26,8 +28,10 @@ mongoose.connect(url, {
     console.log('Connected to database')
 }).catch(err => console.log(err))
 
-app.use(cors())
+
+app.use(cors({origin:'http://localhost:3000', credentials:true}))
 app.use(express.json())
+app.use(require('body-parser').urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: false}))
 // https://stackoverflow.com/questions/29960764/what-does-extended-mean-in-express-4-0#39779840
 // a. express.json() is a method inbuilt in express to recognize the incoming Request Object as a JSON Object. 
@@ -36,15 +40,20 @@ app.use(express.urlencoded({ extended: false}))
 // b. express.urlencoded() is a method inbuilt in express to recognize the incoming Request Object as strings or arrays. 
 // This method is called as a middleware in your application using the code: app.use(express.urlencoded());
 
+app.use(cookieParser(process.env.SESSION_SECRET))
+
+
 app.use(flash())
 app.use(session({
     secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false
+    resave: true,
+    saveUninitialized: true, 
+    cookie:{httpOnly:false}   
 }))
 app.use(passport.initialize())
 app.use(passport.session())
-// require('./passport-config')
+
+initializePassport(passport)
 
 
 
@@ -54,8 +63,10 @@ app.post('/register', (req, res) => {
         if (result){
             res.end('User Already Exists')
         }else{
+            let user = new User(req.body );
+            
             const hashedPassword = await bcrypt.hash(req.body.password, 10)
-            req.body.password = hashedPassword
+            user.password  = hashedPassword
             await user.save()
             console.log('Create users successfully')
             res.status(200).end()
@@ -64,6 +75,7 @@ app.post('/register', (req, res) => {
 })
 
 app.post('/login', (req, res, next) => {
+    
     passport.authenticate('local', (err, user, info) => {
         if (err) throw err
         if (!user){
@@ -73,7 +85,8 @@ app.post('/login', (req, res, next) => {
             req.logIn(user, (err) => {
                 if (err) throw err;
                 console.log('successfully authenticated')
-                // res.send("log in successfully")
+               
+                res.send("log in successfully")
                 // res.redirect('/account')
                 console.log(req.user)
             })
@@ -81,6 +94,7 @@ app.post('/login', (req, res, next) => {
 
     })(req, res, next)
 })
+
 
 // app.get('/account/:id', (req, res) => {
 //     User.findById(req.params.id)
@@ -93,14 +107,10 @@ app.post('/login', (req, res, next) => {
 //     })
 // })
 app.get('/account', (req, res) => {
-    // console.log(req)
+    console.log(req.session)
     res.send(req.user); // The req.user stores the entire user that has been authenticated inside of it.
   });
     
-
-
-
-
 
 
 app.listen(PORT, () => {
