@@ -14,9 +14,8 @@ const passport = require('passport')
 const User = require('./models/model')
 const bcrypt = require('bcrypt')
 const initializePassport = require('./passport-config')
-var cookieParser = require('cookie-parser')
-const bodyParser = require('body-parser')
-const { Store } = require('express-session')
+
+
 
 
 //establish connection to database
@@ -31,8 +30,7 @@ mongoose.connect(url, {
 
 app.use(cors({origin:'http://localhost:3000', credentials:true}))
 app.use(express.json())
-app.use(require('body-parser').urlencoded({ extended: true }));
-app.use(express.urlencoded({ extended: false}))
+app.use(express.urlencoded({ extended: true}))
 // https://stackoverflow.com/questions/29960764/what-does-extended-mean-in-express-4-0#39779840
 // a. express.json() is a method inbuilt in express to recognize the incoming Request Object as a JSON Object. 
 // This method is called as a middleware in your application using the code: app.use(express.json());
@@ -40,15 +38,12 @@ app.use(express.urlencoded({ extended: false}))
 // b. express.urlencoded() is a method inbuilt in express to recognize the incoming Request Object as strings or arrays. 
 // This method is called as a middleware in your application using the code: app.use(express.urlencoded());
 
-app.use(cookieParser(process.env.SESSION_SECRET))
-
-
 app.use(flash())
 app.use(session({
     secret: process.env.SESSION_SECRET,
-    resave: true,
-    saveUninitialized: true, 
-    cookie:{httpOnly:false}   
+    resave: false,
+    saveUninitialized: false, 
+       
 }))
 app.use(passport.initialize())
 app.use(passport.session())
@@ -85,9 +80,7 @@ app.post('/login', (req, res, next) => {
             req.logIn(user, (err) => {
                 if (err) throw err;
                 console.log('successfully authenticated')
-               
                 res.send("log in successfully")
-                // res.redirect('/account')
                 console.log(req.user)
             })
         }
@@ -96,18 +89,8 @@ app.post('/login', (req, res, next) => {
 })
 
 
-// app.get('/account/:id', (req, res) => {
-//     User.findById(req.params.id)
-//     .then(data => {
-//         console.log('retrieved')
-//         res.send(data)
-//     }).catch(err => {
-//         console.log(err)
-//         res.status(500).end()
-//     })
-// })
 app.get('/account', (req, res) => {
-    console.log(req.session)
+    console.log(req.user)
     res.send(req.user); // The req.user stores the entire user that has been authenticated inside of it.
   });
     
